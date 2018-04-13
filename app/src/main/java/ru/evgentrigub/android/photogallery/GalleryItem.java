@@ -1,4 +1,4 @@
-package com.bignerdranch.android.photogallery;
+package ru.evgentrigub.android.photogallery;
 
 public class GalleryItem {
     private String mCaption;

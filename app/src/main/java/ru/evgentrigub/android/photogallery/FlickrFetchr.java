@@ -1,4 +1,4 @@
-package com.bignerdranch.android.photogallery;
+package ru.evgentrigub.android.photogallery;
 
 import android.net.Uri;
 import android.util.Log;
@@ -21,20 +21,22 @@ public class FlickrFetchr {
 
     private static final String TAG = "FlickrFetchr";
 
-    private static final String API_KEY = "ae9ad0c1f6350529c913f772d3452663";
+    private static final String API_KEY = "7f9facd050f3239c7bb76ce80df6e532";
 
-    public byte[] getUrlBytes(String urlSpec) throws IOException{
+    public byte[] getUrlBytes(String urlSpec) throws IOException {
         URL url = new URL(urlSpec);
         HttpURLConnection connection = (HttpURLConnection)url.openConnection();
-
-        try{
+        try {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
-            if (connection.getResponseCode() != HttpURLConnection.HTTP_OK){
-                throw new IOException(connection.getResponseMessage() + ": with" + urlSpec);
+            InputStream in = connection.getInputStream();
+            if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                throw new IOException(connection.getResponseMessage() +
+                        ": with " +
+                        urlSpec);
             }
             int bytesRead = 0;
             byte[] buffer = new byte[1024];
-            while ((bytesRead = in.read(buffer))>0){
+            while ((bytesRead = in.read(buffer)) > 0) {
                 out.write(buffer, 0, bytesRead);
             }
             out.close();
@@ -43,7 +45,6 @@ public class FlickrFetchr {
             connection.disconnect();
         }
     }
-
     public String getUrlString(String urlSpec) throws IOException {
         return new String(getUrlBytes(urlSpec));
     }
@@ -86,11 +87,11 @@ public class FlickrFetchr {
             GalleryItem item = new GalleryItem();
             item.setId(photoJsonObject.getString("id"));
             item.setCaption(photoJsonObject.getString("title"));
-            
+
             if (!photoJsonObject.has("url_s")) {
                 continue;
             }
-            
+
             item.setUrl(photoJsonObject.getString("url_s"));
             items.add(item);
         }
