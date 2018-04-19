@@ -1,13 +1,11 @@
 package ru.evgentrigub.android.photogallery;
 
 import android.annotation.TargetApi;
-import android.graphics.Bitmap;
-import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
+import android.app.Dialog;
+import android.content.Context;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.annotation.RequiresApi;
 import android.support.v4.app.Fragment;
@@ -17,14 +15,18 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
+import android.view.ViewPropertyAnimator;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.ImageView;
 
 import com.bignerdranch.android.photogallery.R;
 import com.squareup.picasso.Picasso;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 
 public class PhotoGalleryFragment extends Fragment {
@@ -33,7 +35,7 @@ public class PhotoGalleryFragment extends Fragment {
 
     private RecyclerView mPhotoRecyclerView;
     private List<GalleryItem> mItems = new ArrayList<>();
-//    private ThumbnailDownloader<PhotoHolder> mThumbnailDownloader;
+    private GalleryItemAdapter mGalleryItemAdapter;
 
     public static PhotoGalleryFragment newInstance() {
         return new PhotoGalleryFragment();
@@ -44,20 +46,7 @@ public class PhotoGalleryFragment extends Fragment {
         super.onCreate(savedInstanceState);
         setRetainInstance(true);
         new FetchItemsTask().execute();
-//
-//        Handler responseHandler = new Handler();
-//        mThumbnailDownloader = new ThumbnailDownloader<>(responseHandler);
-//        mThumbnailDownloader.setThumbnailDownloadListener(
-//                new ThumbnailDownloader.ThumbnailDownloadListener<PhotoHolder>(){
-//                    @Override
-//                    public void onThumbnailDownloaded(PhotoHolder photoHolder, Bitmap bitmap) {
-//                        Drawable drawable = new BitmapDrawable(getResources(), bitmap);
-//                        photoHolder.bindDrawable(drawable);
-//                    }
-//                }
-//        );
-//        mThumbnailDownloader.start();
-//        mThumbnailDownloader.getLooper();
+
         Log.i(TAG, "Background thread started");
     }
 
@@ -68,6 +57,7 @@ public class PhotoGalleryFragment extends Fragment {
 
         mPhotoRecyclerView = (RecyclerView) v.findViewById(R.id.photo_recycler_view);
         mPhotoRecyclerView.setLayoutManager(new GridLayoutManager(getActivity(), 3));
+        mPhotoRecyclerView.setHasFixedSize(true);
 
         setupAdapter();
 
@@ -76,13 +66,13 @@ public class PhotoGalleryFragment extends Fragment {
 
     private void setupAdapter() {
         if (isAdded()) {
-            mPhotoRecyclerView.setAdapter(new GalleryItemAdapter(mItems));
+            mGalleryItemAdapter = new GalleryItemAdapter(mItems);
+            mPhotoRecyclerView.setAdapter(mGalleryItemAdapter);
         }
     }
     @Override
     public void onDestroyView(){
         super.onDestroyView();
-//        mThumbnailDownloader.clearQueue();
     }
 
     @Override
@@ -92,58 +82,60 @@ public class PhotoGalleryFragment extends Fragment {
         Log.i(TAG, "Background thread destroy");
     }
 
-//    private class PhotoHolder extends RecyclerView.ViewHolder {
-//        private ImageView mItemImageView;
-//
-//        public PhotoHolder(View itemView) {
-//            super(itemView);
-//
-//            mItemImageView = (ImageView)itemView.findViewById(R.id.iv_item);
-//
-//        }
-//
-//       public void bindDrawable(Drawable drawable){
-//            mItemImageView.setImageDrawable(drawable);
-//       }
-//    }
-
+    public static List<String> getStringsMonth(Context ctx) {
+        List<String> items = new ArrayList<>();
+        String arr[] = ctx.getResources().getStringArray(R.array.month);
+        for (String s : arr) items.add(s);
+        Collections.shuffle(items);
+        return items;
+    }
 
     private class GalleryItemAdapter extends RecyclerView.Adapter<GalleryItemAdapter.GalleryItemViewHolder> {
 
         private List<GalleryItem> items;
+        private boolean isImageScaled = false;
+        private ViewPropertyAnimator bigImageView;
+        private ImageView imageView;
+
 
         public GalleryItemAdapter(List<GalleryItem> items) {
             this.items = items;
         }
 
-//        public View getView(int position, View convertView, ViewGroup parent) {
-//            if (convertView == null) {
-//                convertView = getActivity().getLayoutInflater()
-//                        .inflate(R.layout.gallery_item, parent, false);
-//            }
-//
-//            GalleryItem item = getItem(position);
-//            ImageView imageView = (ImageView)convertView.findViewById(R.id.iv_item);
-//
-//            imageView.setImageResource(R.drawable.bill_up_close);
-//            Picasso.with(getActivity())
-//                    .load(item.getUrl())
-//                    .noFade()
-//                    .into(imageView);
-//
-//            return convertView;
-//        }
-
         @NonNull
         @Override
         public GalleryItemViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.gallery_item, parent, false);
+
             return new GalleryItemViewHolder(view);
         }
 
         @Override
-        public void onBindViewHolder(@NonNull GalleryItemViewHolder holder, int position) {
+        public void onBindViewHolder(@NonNull final GalleryItemViewHolder holder, final int position) {
             holder.setResource(items.get(position));
+            GalleryItemViewHolder view = (GalleryItemViewHolder) holder;
+            view.ivItem.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    //открытие фотки в полный размер!
+                    fullImageDialog(view);
+
+                }
+            });
+        }
+        public void fullImageDialog(View view){
+            final Dialog dialog = new Dialog(Objects.requireNonNull(getActivity()));
+            dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+            dialog.setContentView(R.layout.dialog_full_image);
+            dialog.setCancelable(true);
+
+            WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
+            lp.copyFrom(dialog.getWindow().getAttributes());
+            lp.width = WindowManager.LayoutParams.WRAP_CONTENT;
+            lp.height = WindowManager.LayoutParams.WRAP_CONTENT;
+
+            dialog.show();
+            dialog.getWindow().setAttributes(lp);
         }
 
         @Override
@@ -151,14 +143,14 @@ public class PhotoGalleryFragment extends Fragment {
             return items.size();
         }
 
+
         class GalleryItemViewHolder extends RecyclerView.ViewHolder{
 
-            private ImageView ivItem;
+            private ImageView ivItem;;
 
-            public GalleryItemViewHolder(View itemView) {
-                super(itemView);
-
-                ivItem = itemView.findViewById(R.id.iv_item);
+            public GalleryItemViewHolder(View v) {
+                super(v);
+                ivItem = v.findViewById(R.id.iv_item);
             }
 
             void setResource(GalleryItem item){
@@ -168,44 +160,8 @@ public class PhotoGalleryFragment extends Fragment {
                         .into(ivItem);
             }
         }
+
     }
-
-//    private class PhotoAdapter extends RecyclerView.Adapter<PhotoHolder> {
-//
-//        private List<GalleryItem> mGalleryItems;
-//
-//        public PhotoAdapter(List<GalleryItem> galleryItems) {
-//            mGalleryItems = galleryItems;
-//        }
-//
-//        @Override
-//        public PhotoHolder onCreateViewHolder(ViewGroup viewGroup, int viewType) {
-//            LayoutInflater inflater = LayoutInflater.from(getActivity());
-//            View view = inflater.inflate(R.layout.gallery_item, viewGroup, false);
-//            return new PhotoHolder(view);
-//        }
-//
-//
-//        public void bindGalleryItem(GalleryItem galleryItem){
-//            Picasso.get()
-//                    .load(galleryItem.getUrl())
-//                    .placeholder(R.drawable.bill_up_close)
-//                    .into();
-//        }
-
-//        @Override
-//        public void onBindViewHolder(PhotoHolder photoHolder, int position) {
-//            GalleryItem galleryItem = mGalleryItems.get(position);
-//            Drawable placeholder = getResources().getDrawable(R.drawable.bill_up_close);
-//            photoHolder.bindDrawable(placeholder);
-//            mThumbnailDownloader.queueThumbnail(photoHolder, galleryItem.getUrl());
-//        }
-//
-//        @Override
-//        public int getItemCount() {
-//            return mGalleryItems.size();
-//        }
-//    }
 
     @TargetApi(Build.VERSION_CODES.CUPCAKE)
     @RequiresApi(api = Build.VERSION_CODES.CUPCAKE)
