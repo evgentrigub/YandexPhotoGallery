@@ -3,11 +3,13 @@ package ru.evgentrigub.android.photogallery;
 import android.annotation.TargetApi;
 import android.app.Dialog;
 import android.content.Context;
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.RequiresApi;
+import android.support.v4.app.ActivityOptionsCompat;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -15,18 +17,14 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.ViewPropertyAnimator;
 import android.view.Window;
 import android.view.WindowManager;
-import android.widget.ImageView;
-
-import com.bignerdranch.android.photogallery.R;
-import com.squareup.picasso.Picasso;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+
 
 
 public class PhotoGalleryFragment extends Fragment {
@@ -39,6 +37,10 @@ public class PhotoGalleryFragment extends Fragment {
 
     public static PhotoGalleryFragment newInstance() {
         return new PhotoGalleryFragment();
+    }
+
+    public interface Listener {
+        void onImageClicked(View view);
     }
 
     @Override
@@ -90,43 +92,82 @@ public class PhotoGalleryFragment extends Fragment {
         return items;
     }
 
-    private class GalleryItemAdapter extends RecyclerView.Adapter<GalleryItemAdapter.GalleryItemViewHolder> {
+    private class GalleryItemAdapter extends RecyclerView.Adapter<ImageViewHolder> {
 
         private List<GalleryItem> items;
         private boolean isImageScaled = false;
-        private ViewPropertyAnimator bigImageView;
-        private ImageView imageView;
+
+        Listener mListener;
 
 
         public GalleryItemAdapter(List<GalleryItem> items) {
             this.items = items;
         }
 
+        public GalleryItemAdapter(Listener listener) {
+            mListener = listener;
+        }
+
+
+//        @Override
+//        public GalleryItemViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+//            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.gallery_item, parent, false);
+//
+//            return new GalleryItemViewHolder(view);
+//        }
+
+//        @Override
+//        public GalleryItemAdapter onCreateViewHolder(ViewGroup parent, int viewType) {
+//            ImageViewHolder holder = ImageViewHolder.inflate(parent);
+//            holder.itemView.setOnClickListener(new View.OnClickListener() {
+//                @Override
+//                public void onClick(View view) {
+//                    mListener.onImageClicked(view);
+//                }
+//            });
+//            return holder;
+//        }
+
+
         @NonNull
         @Override
-        public GalleryItemViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.gallery_item, parent, false);
-
-            return new GalleryItemViewHolder(view);
-        }
-
-        @Override
-        public void onBindViewHolder(@NonNull final GalleryItemViewHolder holder, final int position) {
-            holder.setResource(items.get(position));
-            GalleryItemViewHolder view = (GalleryItemViewHolder) holder;
-            view.ivItem.setOnClickListener(new View.OnClickListener() {
+        public ImageViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+            ImageViewHolder holder = ImageViewHolder.inflate(parent);
+            holder.itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    //открытие фотки в полный размер!
-                    fullImageDialog(view);
-
+                    Intent intent = new Intent(getActivity(), ActivityFullTransition.class);
+//                    ActivityOptionsCompat options = ActivityOptionsCompat
+//                            .makeSceneTransitionAnimation(Objects.requireNonNull(getActivity()), view, getString(R.string.transition_test));
+                    startActivity(intent);
                 }
             });
+
+            return holder;
         }
+
+        public void onBindViewHolder(ImageViewHolder holder, int position){
+            holder.setResource(items.get(position), getActivity());
+
+        }
+
+
+//        public void onBindViewHolder(ImageViewHolder holder, final int position) {
+//            holder.setResource(items.get(position));
+//            ImageViewHolder view = (ImageViewHolder) holder;
+//            view.ivItem.setOnClickListener(new View.OnClickListener() {
+//                @Override
+//                public void onClick(View view) {
+//                    //открытие фотки в полный размер!
+////                    fullImageDialog(view);
+//
+//                }
+//            });
+//        }
         public void fullImageDialog(View view){
             final Dialog dialog = new Dialog(Objects.requireNonNull(getActivity()));
             dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-            dialog.setContentView(R.layout.dialog_full_image);
+            dialog.setContentView(R.layout.activity_full_transition);
             dialog.setCancelable(true);
 
             WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
@@ -144,22 +185,22 @@ public class PhotoGalleryFragment extends Fragment {
         }
 
 
-        class GalleryItemViewHolder extends RecyclerView.ViewHolder{
-
-            private ImageView ivItem;;
-
-            public GalleryItemViewHolder(View v) {
-                super(v);
-                ivItem = v.findViewById(R.id.iv_item);
-            }
-
-            void setResource(GalleryItem item){
-                Picasso.with(getActivity())
-                        .load(item.getUrl())
-                        .noFade()
-                        .into(ivItem);
-            }
-        }
+//        class GalleryItemViewHolder extends RecyclerView.ViewHolder{
+//
+//            private ImageView ivItem;;
+//
+//            public GalleryItemViewHolder(View v) {
+//                super(v);
+//                ivItem = v.findViewById(R.id.iv_item);
+//            }
+//
+//            void setResource(GalleryItem item){
+//                Picasso.with(getActivity())
+//                        .load(item.getUrl())
+//                        .noFade()
+//                        .into(ivItem);
+//            }
+//        }
 
     }
 
